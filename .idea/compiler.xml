@@ -9,8 +9,5 @@
         <module name="yahoo-robot" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="yahoo-robot" target="1.5" />
-    </bytecodeTargetLevel>
   </component>
 </project>
