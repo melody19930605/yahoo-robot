@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%m%n\t[%d{yyyy-MM-dd HH:mm:ss.SSS}]\t[%p]\t[%C{1}.%M:%L]\t[%t]</pattern>
+            <charset>utf8</charset>
+        </encoder>
+    </appender>
+
+    <root level="DEBUG">
+        <appender-ref ref="CONSOLE" />
+    </root>
+</configuration>
