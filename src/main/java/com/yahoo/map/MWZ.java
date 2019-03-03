@@ -9,7 +9,11 @@ import java.awt.*;
 public class MWZ {
     public static void mwz(Robot robot, MyCityEnum myCityEnum) throws Exception {
         //TODO 走到魔王洞
-        if (MyCityEnum.CSJW.equals(myCityEnum)) {
+        if (MyCityEnum.MWJ.equals(myCityEnum)) {
+            Point myMousePoint = new Point();
+            myMousePoint.setLocation(593, 351);//大约定位到游戏的62,18
+            RobotMain.playerGoToPointByRedPoint(robot, myMousePoint,null);
+
             java.awt.Toolkit.getDefaultToolkit().beep();
             java.awt.Toolkit.getDefaultToolkit().beep();
             java.awt.Toolkit.getDefaultToolkit().beep();

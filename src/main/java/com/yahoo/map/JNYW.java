@@ -14,9 +14,10 @@ public class JNYW {
             myMousePoint.setLocation(635, 452);//大约定位到游戏的62,18
             Point myPlayerPoint = new Point();
             myPlayerPoint.setLocation(143, 55);
-            RobotMain.playerGoToPointByRedPoint(robot, myMousePoint);
-            myMousePoint.setLocation(994, 450);
-            RobotMain.myMoveAndClick(robot, myMousePoint);
+            Point nextPoint = new Point(994, 450);
+            RobotMain.playerGoToPointByRedPoint(robot, myMousePoint,nextPoint);
+            RobotMain.myMoveAndClick(robot, null);
         }
+        Thread.sleep(1500);
     }
 }

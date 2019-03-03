@@ -9,10 +9,10 @@ import java.awt.*;
 public class STL {
     public static void stl(Robot robot, MyCityEnum myCityEnum) throws Exception {
         //
-        if (MyCityEnum.DDW.equals(myCityEnum)) {
+        if (MyCityEnum.SWD.equals(myCityEnum)) {
             Point myMousePoint = new Point();
             myMousePoint.setLocation(623, 511);//大约定位到游戏的62,18
-            RobotMain.playerGoToPointByXY(robot, myMousePoint, myMousePoint, EntranceTypeEnum.DIRECT);
+            RobotMain.playerGoToPointByRedPoint(robot, myMousePoint,null);
             if(1==1){
                 java.awt.Toolkit.getDefaultToolkit().beep();
                 return;
@@ -24,7 +24,7 @@ public class STL {
         if (MyCityEnum.EDW.equals(myCityEnum)) {
             Point myMousePoint = new Point();
             myMousePoint.setLocation(623, 511);//大约定位到游戏的62,18
-            RobotMain.playerGoToPointByXY(robot, myMousePoint, myMousePoint, EntranceTypeEnum.DIRECT);
+            RobotMain.playerGoToPointByRedPoint(robot, myMousePoint,null);
             if(1==1){
                 java.awt.Toolkit.getDefaultToolkit().beep();
                 return;
@@ -34,16 +34,13 @@ public class STL {
         }
 
 
-        if (MyCityEnum.SDW.equals(myCityEnum)) {
+        if (MyCityEnum.YWD.equals(myCityEnum)) {
             Point myMousePoint = new Point();
-            myMousePoint.setLocation(623, 511);//大约定位到游戏的62,18
-            RobotMain.playerGoToPointByXY(robot, myMousePoint, myMousePoint, EntranceTypeEnum.DIRECT);
-            if(1==1){
-                java.awt.Toolkit.getDefaultToolkit().beep();
-                return;
-            }
-            myMousePoint.setLocation(913, 780);
+            myMousePoint.setLocation(343, 469);//大约定位到游戏的62,18
+            RobotMain.playerGoToPointByRedPoint(robot, myMousePoint,null);
+            myMousePoint.setLocation(352, 376);
             RobotMain.myMoveAndClick(robot, myMousePoint);
         }
+        Thread.sleep(1500);
     }
 }

@@ -39,13 +39,13 @@ public class MyImageUtil {
      * @param originalImage
      * @return
      */
-    public static BufferedImage getBlackPicture(BufferedImage originalImage){
+    public static BufferedImage getColorPicture(BufferedImage originalImage,Color filterColor,Color replaceColor){
         int width = originalImage.getWidth();
         int height = originalImage.getHeight();
         int[] rgbArr = originalImage.getRGB(0, 0, width, height, null/*数组*/, 0, width);
         for(int i=0;i<rgbArr.length;i++){
-            if(rgbArr[i]!=Color.white.getRGB()){
-                rgbArr[i] = Color.BLACK.getRGB();
+            if(rgbArr[i]!=filterColor.getRGB()){
+                rgbArr[i] = replaceColor.getRGB();
             }
         }
         originalImage.setRGB(0, 0, width, height, rgbArr, 0, width);

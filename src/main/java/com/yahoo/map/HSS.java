@@ -21,9 +21,10 @@ public class HSS {
             myMousePoint.setLocation( 562,424);
             Point myPlayerPoint = new Point();
             myPlayerPoint.setLocation(90, 54);
-            RobotMain.playerGoToPointByXY(robot, myMousePoint, myPlayerPoint, EntranceTypeEnum.NPC);
-            myMousePoint.setLocation(597, 367);
-            RobotMain.myMoveAndClick(robot, myMousePoint);
+            Point nextPoint = new Point(597, 367);
+            RobotMain.playerGoToPointByXY(robot, myMousePoint, myPlayerPoint, nextPoint);
+            RobotMain.myMoveAndClick(robot, null);
         }
+        Thread.sleep(1500);
     }
 }

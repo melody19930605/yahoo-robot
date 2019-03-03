@@ -12,22 +12,21 @@ public class CSJW {
         if (MyCityEnum.CSC.equals(myCityEnum)) {
             Point myMousePoint = new Point();
             myMousePoint.setLocation(590, 315);
-            RobotMain.playerGoToPointByXY(robot, myMousePoint, myMousePoint, EntranceTypeEnum.DIRECT);
-            myMousePoint.setLocation(547, 132);
-            RobotMain.myMoveAndClick(robot, myMousePoint);
+            Point nextPoint = new Point(547, 132);
+            RobotMain.playerGoToPointByRedPoint(robot, myMousePoint,nextPoint);
+            RobotMain.myMoveAndClick(robot, null);
         }
         //天宫
         if (MyCityEnum.TG.equals(myCityEnum)) {
             Point myMousePoint = new Point();
             myMousePoint.setLocation(376, 485);//大约定位到游戏的62,18
-            RobotMain.playerGoToPointByXY(robot, myMousePoint, myMousePoint, EntranceTypeEnum.DIRECT);
+            RobotMain.playerGoToPointByRedPoint(robot, myMousePoint,null);
             if(1==1){
                 java.awt.Toolkit.getDefaultToolkit().beep();
                 java.awt.Toolkit.getDefaultToolkit().beep();
                 java.awt.Toolkit.getDefaultToolkit().beep();
             }
-            //myMousePoint.setLocation(547, 132);
-            //RobotMain.myMoveAndClick(robot, myMousePoint);
         }
+        Thread.sleep(1500);
     }
 }

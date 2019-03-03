@@ -12,12 +12,16 @@ public class BJLZ {
             //TODO 找到地遁鬼
             Point myMousePoint = new Point();
             myMousePoint.setLocation(609, 563);//大约定位到游戏的62,18
-            RobotMain.playerGoToPointByXY(robot, myMousePoint, myMousePoint, EntranceTypeEnum.DIRECT);
-            myMousePoint.setLocation(705, 604);
-            RobotMain.myMoveAndClick(robot, myMousePoint);
+
+            Point nextPoint = new Point(705, 604);
+            RobotMain.playerGoToPointByRedPoint(robot, myMousePoint,nextPoint);
+            RobotMain.myMoveAndClick(robot, null);
+
             //对话传送
             myMousePoint.setLocation(325, 480);
             RobotMain.myMoveAndClick(robot, myMousePoint);
         }
+        Thread.sleep(1500);
+
     }
 }

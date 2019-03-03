@@ -2,14 +2,8 @@ package com.yahoo;
 
 import com.alibaba.fastjson.JSON;
 import com.yahoo.biao.BiaoPath;
-import com.yahoo.map.CAC;
-import com.yahoo.model.EntranceTypeEnum;
-import com.yahoo.model.MyCityEnum;
-import com.yahoo.model.MyLocation;
-import com.yahoo.model.MyPoint;
-import com.yahoo.util.ImgCmpUtil;
-import com.yahoo.util.MyImageFingerPrint;
-import com.yahoo.util.MyImageUtil;
+import com.yahoo.model.*;
+import com.yahoo.util.*;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,19 +15,21 @@ import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * https://www.yuque.com/yi7twv/zvqmrm/gc9sid
- * 204,152初始窗体坐标
+ * 204,152初始窗体坐标目标位置
  * 麻痹的必须以管理员说身份运行。真的很难受啊
  */
 public class RobotMain {
     public final static Random random = new Random();
     public static boolean isInWar = Boolean.FALSE;
-    public static AtomicInteger mapLock = new AtomicInteger(0);//1为关闭。0为打开
+    public static MyCityEnum currentCity;
+    public static MyCityEnum lastCity;
+    public static boolean isNear = Boolean.FALSE;
     public final static Logger logger = LoggerFactory.getLogger(RobotMain.class);
-    public static String biaoTarget = "GYJJ";
+    public static MyBiaoTargetEnum biaoTarget = null;
+
     public static void main(String[] args) throws Exception {
         Robot robot = new Robot();
         Thread myAppThread = new Thread() {
@@ -50,26 +46,24 @@ public class RobotMain {
         Thread.sleep(2000);
         while (true) {
             try {
-                //不停的运行监测郑旭
-                if (!isInWar&&isAtWar(robot)) {
+                //不停的运行监测战斗
+                MyBattle myBattle = checkBattle(robot);
+                if (myBattle.isBlock()) {
                     isInWar = Boolean.TRUE;
-                    opWar(robot);
-                    logger.info("DEBUG:键盘操作战斗完成。线程睡眠8s。时间长度根据任务动画调整");
-                    //Thread.sleep(2   * 1000L);//预留出一场动画战斗的时间。大约10s
-                    continue;
-                } else if (isInWar) {
-                    //判断出能不能找到小红点。如果能找到小红点说明确实不在战斗中了
-                    logger.info("DEBUG:#####################################。");
-
-                    MyPoint myPoint = getMyRedPointOnMiniMap(robot,2);
-                    logger.info("DEBUG:@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@。");
-                    if(null==myPoint){
+                    logger.info("warwarwarwarwarwarwarwarwarwar");
+                    java.awt.Toolkit.getDefaultToolkit().beep();
+                    Thread.sleep(2000L);
+                } else if(myBattle.isInBattle()){
+                    isInWar = Boolean.TRUE;
+                    boolean isOpBattle = checkBattleOp(robot);
+                    if(isOpBattle){
                         opWar(robot);
-                    }else{
+                        Thread.sleep(2000L);
+                    }
+                }else{
+                    if(Thread.State.TERMINATED.equals( myAppThread.getState())){
                         isInWar = Boolean.FALSE;
-                        logger.info("DEBUG:检测已经脱战。");
-                        opMiniMap(robot,1);
-                        new Thread() {
+                        myAppThread = new Thread() {
                             @Override
                             public void run() {
                                 try{
@@ -78,25 +72,22 @@ public class RobotMain {
                                     logger.error(e.toString(),e);
                                 }
                             }
-                        }.start();
+                        };
+                        myAppThread.start();
                     }
-                } else {
-                    logger.info("DEBUG:未知情况XXXX。" + isInWar+ JSON.toJSONString( myAppThread.getState()));
                 }
-                Thread.sleep(2000L);
             } catch (Exception e) {
                 logger.error(e.toString(),e);
             }
         }
-
     }
 
     private static void opWar(Robot robot) throws Exception {
         robot.keyPress(KeyEvent.VK_ALT);
         getRandomSleep();
-        robot.keyPress(KeyEvent.VK_Q);
+        robot.keyPress(KeyEvent.VK_A);
         getRandomSleep();
-        robot.keyRelease(KeyEvent.VK_Q);
+        robot.keyRelease(KeyEvent.VK_A);
         getRandomSleep();
         robot.keyPress(KeyEvent.VK_A);
         getRandomSleep();
@@ -106,7 +97,7 @@ public class RobotMain {
     }
 
     public static void getRandomSleep() throws Exception {
-        int sleepTime = random.nextInt(10) + 100;
+        int sleepTime = random.nextInt(10) + 200;
         Thread.sleep(sleepTime);
     }
 
@@ -115,68 +106,86 @@ public class RobotMain {
         Point point = new Point();
         //关闭IDE
         point.setLocation(1502, 8);
-        logger.info("DEBUG:关闭IDE。。");
         moveAndClick(robot, point, -1);
-
         //激活梦幻窗体
         point.setLocation(430, 30);
         moveAndClick(robot, point, 0);
-        logger.info("DEBUG:激活My窗体。。");
-        //讲梦幻鼠标载入游戏中
+        //梦幻鼠标载入游戏中
         point.setLocation(550, 470);
-        moveAndClick(robot, point, 0);
-        logger.info("DEBUG:载入游戏鼠标。。");
+        moveAndClick(robot, point, -1);
     }
 
     public static void myApplication(Robot robot,boolean isInit) throws Exception {
         //设置Robot产生一个动作后的休眠时间,否则执行过快
-        logger.info("DEBUG:myApplication START。。");
+        logger.info("DEBUG:。。。myApplication START。。。");
         if(isInit){
             robot.setAutoDelay(1);
             closeIDEActiveMy(robot);
-            //关闭小地图。不管有没有都关闭。也好把鼠标放在窗体中
-            opMiniMap(robot, 1);
         }
-        Boolean isBiaoStop = Boolean.FALSE;
-        if ("QQF".equals(biaoTarget)) {
+        if(null==biaoTarget){
+            BiaoPath.toBIAO(robot);
+            return;
+        }
+        if (MyBiaoTargetEnum.QQ.equals(biaoTarget)) {
             BiaoPath.toQQF(robot);
             return;
         }
-        if ("GYJJ".equals(biaoTarget)) {
+        if (MyBiaoTargetEnum.GYJJ.equals(biaoTarget)) {
             BiaoPath.toGYJJ(robot);
             return;
         }
         //TODO 狮驼岭方向的各位走法
-        if ("DDW".equals(biaoTarget)
-        ||"EDW".equals(biaoTarget)
-        ||"SDW".equals(biaoTarget)) {
+        if (MyBiaoTargetEnum.DDW.equals(biaoTarget)
+        ||MyBiaoTargetEnum.EDW.equals(biaoTarget)
+        ||MyBiaoTargetEnum.SDW.equals(biaoTarget)) {
             BiaoPath.toDDW(robot);
             return;
         }
         //孙婆婆方向的走法
-        if ("SPP".equals(biaoTarget)) {
+        if (MyBiaoTargetEnum.SPP.equals(biaoTarget)) {
             BiaoPath.toSPP(robot);
             return;
         }
         //东海龙王
-        if ("DHLW".equals(biaoTarget)) {
+        if (MyBiaoTargetEnum.DHLW.equals(biaoTarget)) {
             BiaoPath.toDHLW(robot);
             return;
         }
-        if ("ZYDX".equals(biaoTarget)) {
+        if (MyBiaoTargetEnum.ZYDX.equals(biaoTarget)) {
             BiaoPath.toZYDX(robot);
             return;
         }
-        if ("NMW".equals(biaoTarget)) {
+        if (MyBiaoTargetEnum.NMW.equals(biaoTarget)) {
             BiaoPath.toNMW(robot);
             return;
         }
-        if ("LJ".equals(biaoTarget)||"YJ".equals(biaoTarget)) {
+        if (MyBiaoTargetEnum.LJ.equals(biaoTarget)||MyBiaoTargetEnum.YJ.equals(biaoTarget)) {
             BiaoPath.toLJ(robot);
             return;
         }
-        if ("KD".equals(biaoTarget)) {
+        if (MyBiaoTargetEnum.KD.equals(biaoTarget)) {
             BiaoPath.toKD(robot);
+            return;
+        }
+        if (MyBiaoTargetEnum.CYJ.equals(biaoTarget)) {
+            BiaoPath.toCYJ(robot);
+            return;
+        }
+        if (MyBiaoTargetEnum.BBGN.equals(biaoTarget)||MyBiaoTargetEnum.HSN.equals(biaoTarget)) {
+            BiaoPath.toBJJ(robot);
+            return;
+        }
+        if (MyBiaoTargetEnum.PTZS.equals(biaoTarget)) {
+            BiaoPath.toPTZS(robot);
+            return;
+        }
+        if (MyBiaoTargetEnum.DZW.equals(biaoTarget)) {
+            BiaoPath.toDZW(robot);
+            return;
+        }
+        //地藏王
+        if (MyBiaoTargetEnum.DZW.equals(biaoTarget)) {
+            BiaoPath.toDZW(robot);
             return;
         }
     }
@@ -202,8 +211,7 @@ public class RobotMain {
     }
 
     /**
-     * 获取红点在坐标系的位置。
-     *
+     * 获取地图上的红点在坐标系的位置。
      * @param robot
      * @return
      * @throws Exception
@@ -214,7 +222,10 @@ public class RobotMain {
             opMiniMap(robot, 0);
             while (true) {
                 loop++;
-                if(isInWar&&null==maxFindCount){
+                if(loop>5){
+                    return null;
+                }
+                if(isInWar){
                     return null;
                 }
                 if(null!=maxFindCount&&( loop>maxFindCount)){
@@ -224,20 +235,17 @@ public class RobotMain {
                 BufferedImage pointer = ImageIO.read(new File("redPoint.png"));
                 Point mousePoint = ImgCmpUtil.isImageContain(currentMapImage, pointer);
                 if (null == mousePoint) {
-                    Thread.sleep(2000L);
+                    Thread.sleep(500L);
                     continue;
                 }
                 MyPoint myPoint = new MyPoint();
                 myPoint.setLocation(mousePoint.x + 3, mousePoint.y + 3);//TODO TODO 修正?
                 myPoint.setLocation(myPoint.x + MyImageUtil.MAP_START_X, myPoint.y + MyImageUtil.MAP_START_Y);
-                opMiniMap(robot, 1);
                 return myPoint;
             }
         }catch (Exception e){
-            logger.info(e.toString(),e);
+            logger.error(e.toString(),e);
             return null;
-        }finally {
-            opMiniMap(robot,1);
         }
     }
 
@@ -263,8 +271,12 @@ public class RobotMain {
      * @return
      * @throws Exception
      */
-    private static MyPoint getMyPointer(Robot robot) throws Exception {
+    public static MyPoint getMyPointer(Robot robot) throws Exception {
+        int loop=0;
         while (true) {
+            if(loop>5){
+                return null;
+            }
             if(isInWar){
                 return null;
             }
@@ -281,6 +293,10 @@ public class RobotMain {
                 logger.info("DEBUG:更换鼠标图片重新识别,选中状态" + JSON.toJSONString(mousePoint));
             }
             if (null == mousePoint) {
+                //尝试右键鼠标。有可能正在攻击目标
+                //robot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
+                //getRandomSleep();
+                //robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
                 Thread.sleep(500L);
                 continue;
             }
@@ -295,58 +311,97 @@ public class RobotMain {
     }
 
     /**
+     * 操作物品栏
      * @param robot
      * @param isOpen
      * @throws Exception
      */
-    private static void opMiniMap(Robot robot, int isOpen) throws Exception {
-        synchronized (mapLock){
-            /**
-            if(1==mapLock.get()&&1==isOpen){
-                //如果地图本来就是关闭的。指令也是关闭。返回
-                return;
-            }**/
-            Point point = new Point();
-            point.setLocation(560, 429);
-            //关闭小地图不需要鼠标精确移动的
-            moveTo(robot, point);
-            //右键操作关闭任何地图
-            logger.info("DEBUG:准备右键按下关闭地图");
-            robot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
-            getRandomSleep();
-            logger.info("DEBUG:准备右键松开关闭地图");
-            robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
-            mapLock.set(1);
-            if (0 == isOpen) {
-                /**
-                if(0==mapLock.get()&&0==isOpen){
-                    //如果地图本来就是打开的。指令也是打开。返回
-                    return;
-                }**/
-                logger.info("DEBUG:准备TAB打开地图");
-                getRandomSleep();
-                robot.keyPress(KeyEvent.VK_TAB);
-                logger.info("DEBUG:按下TAB打开地图");
-                getRandomSleep();
-                getRandomSleep();
-                robot.keyRelease(KeyEvent.VK_TAB);
-                logger.info("DEBUG:松开TAB打开地图");
-                mapLock.set(0);
+    public static void opInventory(Robot robot, int isOpen) throws Exception {
+        Rectangle screenRect = new Rectangle(0, 0, 1030, 829);
+        BufferedImage searchImg = robot.createScreenCapture(screenRect);
+        BufferedImage mapImg = ImageIO.read(new File("imgsource/daojulan.png"));
+        Point daojuPoint = ImgCmpUtil.isImageContain(searchImg, mapImg);
+        if(1==isOpen){
+            if(null==daojuPoint){
+                return;//说明本来就是关闭的
             }
+        }
+        if (0 == isOpen) {
+            if (null != daojuPoint) {
+                return;//说明本来就是打开的
+            }
+        }
+        logger.info("DEBUG:准备TAB关闭道具");
+        robot.keyPress(KeyEvent.VK_ALT);
+        getRandomSleep();
+        robot.keyPress(KeyEvent.VK_E);
+        getRandomSleep();
+        robot.keyRelease(KeyEvent.VK_E);
+        getRandomSleep();
+        robot.keyRelease(KeyEvent.VK_ALT);
+    }
+    /**
+     * @param robot
+     * @param isOpen
+     * @throws Exception
+     */
+    public static void opMiniMap(Robot robot, int isOpen) throws Exception {
+        Rectangle screenRect = new Rectangle(0, 0, 1030, 829);
+        BufferedImage searchImg = robot.createScreenCapture(screenRect);
+        BufferedImage mapImg = ImageIO.read(new File("imgsource/map_shijie.png"));
+        Point mapPoint = ImgCmpUtil.isImageContain(searchImg, mapImg);
+        /****/
+        if(1==isOpen){
+            if(null==mapPoint){
+                return;//说明本来就是关闭的
+            }
+            logger.info("DEBUG:准备TAB关闭地图");
+            robot.keyPress(KeyEvent.VK_TAB);
+            getRandomSleep();
+            robot.keyRelease(KeyEvent.VK_TAB);
+            getRandomSleep();
+        }
+        if (0 == isOpen) {
+            if(null!=mapPoint){
+                return;//说明本来就是打开的
+            }
+            logger.info("DEBUG:准备TAB打开地图");
+            robot.keyPress(KeyEvent.VK_TAB);
+            getRandomSleep();
+            robot.keyRelease(KeyEvent.VK_TAB);
+            getRandomSleep();
+            getRandomSleep();
         }
     }
 
-    public static void myMoveAndClick(Robot robot, Point myMousePoint) throws Exception {
+    /**
+     * 0是左键。
+     * 1是右键
+     * @param robot
+     * @param myMousePoint
+     * @param mouseType
+     * @throws Exception
+     */
+    public static void myMoveAndClick(Robot robot, Point myMousePoint,int mouseType) throws Exception {
         //游戏鼠标地图定位
         if (null != myMousePoint) {
             myMoveTo(robot, myMousePoint);
         }
-        logger.info("DEBUG:准备按下左键。");
-        robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-        getRandomSleep();
-        logger.info("DEBUG:准备松开左键。");
-        robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-        getRandomSleep();
+        if(0==mouseType){
+            robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+            logger.info("DEBUG:准备松开左键。");
+            robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+            getRandomSleep();
+        }else if(1==mouseType){
+            robot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
+            logger.info("DEBUG:准备松开右键。");
+            robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
+            getRandomSleep();
+        }
+
+    }
+    public static void myMoveAndClick(Robot robot, Point myMousePoint) throws Exception {
+        myMoveAndClick(robot,myMousePoint,0);
     }
 
     /**
@@ -357,7 +412,6 @@ public class RobotMain {
     private static void myMoveAndClickOnMiniMap(Robot robot, Point myMousePoint) throws Exception {
         opMiniMap(robot, 0);
         myMoveAndClick(robot, myMousePoint);
-        opMiniMap(robot, 1);
     }
 
     /**
@@ -365,8 +419,21 @@ public class RobotMain {
      * @param myMousePoint  游戏鼠标在地图中的位置。
      * @throws Exception
      */
-    public static void playerGoToPointByRedPoint(Robot robot, Point myMousePoint) throws Exception {
+    public static void playerGoToPointByRedPoint(Robot robot, Point myMousePoint,Point nextPoint) throws Exception {
+        if(isNear){
+            return;
+        }
         myMoveAndClickOnMiniMap(robot, myMousePoint);
+        if("ZYDX".equals(biaoTarget) && currentCity.equals(MyCityEnum.DTJW)){
+            Thread.sleep(6000L);
+        }
+        //地图上鼠标会挡住小红点。鼠标随便移走
+        //moveTo(robot,new Point(500,500));
+        if(null!=nextPoint){
+            myMoveTo(robot,nextPoint);
+        }else{
+            moveTo(robot,new Point(250,250));
+        }
         //检测是否走到了
         int loopCount = 0;
         MyPoint myCurLocation;
@@ -378,7 +445,7 @@ public class RobotMain {
                 break;
             }
             //等待人物走位到指定坐标
-            myCurLocation = getMyRedPointOnMiniMap(robot,null);
+            myCurLocation = getMyRedPointOnMiniMap(robot,3);
             if (null == myCurLocation) {
                 logger.info("DEBUG:识别人物坐标失败。1s重试");
                 Thread.sleep(500);
@@ -386,36 +453,43 @@ public class RobotMain {
             }
             //TODO 红点查找和坐标查找是有误差的。
             //TODO 红点放大到20 ,坐标在5以内
-            if (isNear(myMousePoint, myCurLocation, "user",20)) {
-                System.err.println("哈哈,我到了,休眠2s,地图晃动");
-                Thread.sleep(5000L);
-                return;
-            }
+            //这个数据在五庄观很微妙25
+            //当两次坐标不再变化的时候,再去检测距离到了没有
             if (null != lastMyPoint && lastMyPoint.x == myCurLocation.x && lastMyPoint.y == myCurLocation.y) {
-                //TODO 两次坐标计算发现人物没有动.也没有达到指定坐标。肯定是发生了事情啦
-                logger.info("DEBUG:两次人物坐标未发生变化。");
-                playerGoToPointByRedPoint(robot, myMousePoint);
-                return;
+                if (isNear(myMousePoint, myCurLocation, "user",40)) {
+                    System.err.println("哈哈,我到了,休眠2s,地图晃动");
+                    isNear = Boolean.TRUE;
+                    opMiniMap(robot,1);
+                    Thread.sleep(1500L);
+                    return;
+                }else{
+                    //TODO 两次坐标计算发现人物没有动.也没有达到指定坐标。肯定是发生了事情啦
+                    logger.error("DEBUG:两次人物坐标未发生变化。");
+                    playerGoToPointByRedPoint(robot, myMousePoint,nextPoint);
+                    return;
+                }
             }
             lastMyPoint = myCurLocation;
-            if (loopCount > 30) {
-                java.awt.Toolkit.getDefaultToolkit().beep();
-                java.awt.Toolkit.getDefaultToolkit().beep();
-                java.awt.Toolkit.getDefaultToolkit().beep();
-                break;
-            }
-            Thread.sleep(3000);
+            //慢一点检查。防止没走到近似坐标
+            Thread.sleep(500);
         }
     }
 
     /**
-     * 押镖的时候娶不到坐标。所以用小地图红点算法逼近是否Near
+     * 识别地图上个的XY坐标。计算是否逼近
      */
-    public static void playerGoToPointByXY(Robot robot, Point myMousePoint, Point myPlayerPoint, EntranceTypeEnum nextEntranceTypeEnum) throws Exception {
+    public static void playerGoToPointByXY(Robot robot, Point myMousePoint, Point myPlayerPoint, Point nextPoint) throws Exception {
+        if(isNear){
+            return;
+        }
         myMoveAndClickOnMiniMap(robot, myMousePoint);
+        if(null!=nextPoint){
+            myMoveTo(robot,nextPoint);
+        }
         //检测是否走到了
         int loopCount = 0;
         MyLocation myLocation;
+
         //上一次人物坐标的位置
         Point lastMyPoint = null;
         while (true) {
@@ -427,62 +501,56 @@ public class RobotMain {
             myLocation = getMyLocation(robot, 0, 1);
             if (null == myLocation) {
                 logger.info("DEBUG:识别人物坐标失败。1s重试");
-                Thread.sleep(1000);
+                Thread.sleep(500);
                 continue;
             }
             Point myPoint = new Point(myLocation.getX(), myLocation.getY());
             if (isNear(myPlayerPoint, myPoint, "user", 10)) {
                 System.err.println("哈哈,我到了,休眠2s,地图晃动");
-                Thread.sleep(5000L);
+                opMiniMap(robot,1);
+                Thread.sleep(2000L);
                 break;
             }
             if (null != lastMyPoint && lastMyPoint.x == myPoint.x && lastMyPoint.y == myPoint.y) {
-                //TODO 两次坐标计算发现人物没有动.也没有达到指定坐标。肯定是发生了事情啦
-                playerGoToPointByXY(robot, myMousePoint, myPlayerPoint, nextEntranceTypeEnum);
+                //TODO 两次坐标计算发现人物没有动.也没有达到指定坐标。
+                logger.error("DEBUG:两次人物坐标未发生变化。");
+                playerGoToPointByXY(robot, myMousePoint, myPlayerPoint, nextPoint);
                 return;
             }
             lastMyPoint = myPoint;
-
-            if (loopCount > 30) {
-                java.awt.Toolkit.getDefaultToolkit().beep();
-                java.awt.Toolkit.getDefaultToolkit().beep();
-                java.awt.Toolkit.getDefaultToolkit().beep();
-                break;
-            }
-            Thread.sleep(3000);
+            Thread.sleep(2000);
         }
     }
-
-
-    public static boolean isAtWar(Robot robot) throws Exception {
-        //TODO 这里可以检查红包的标志在不在.红包不在了那么就是遇到了弹层
-        Point point = new Point(894, 292);
-        Rectangle screenRect = new Rectangle(point.x, point.y, 66, 298);
-        BufferedImage warImage = robot.createScreenCapture(screenRect);
-        MyImageFingerPrint currentWar = new MyImageFingerPrint(warImage);
-        MyImageFingerPrint war = new MyImageFingerPrint(ImageIO.read(new File("currentWar.png")));
-        boolean result;
-        double compareResult = currentWar.compare(war);
-        if (compareResult > 0.63) {
-            result = true;
-        } else {
-            result = false;
+    public static boolean checkBattleOp(Robot robot) throws Exception {
+        //检查是否有操作界面。如果有操作界面那么操作
+        //TODO
+        Point myMousePoint = SearchPointUtil.getPointOnMiniMap(robot,"BATTLE_USER",false,"imgsource/battle_user.png",null);
+        if(null!=myMousePoint){
+            return true;
         }
-        /**
-        if(!result){
-            MyPoint myPoint = getMyRedPointOnMiniMap(robot,2);
-            if(null==myPoint){
-                java.awt.Toolkit.getDefaultToolkit().beep();
-                java.awt.Toolkit.getDefaultToolkit().beep();
-                java.awt.Toolkit.getDefaultToolkit().beep();
-                java.awt.Toolkit.getDefaultToolkit().beep();
-                result = true;
+        return false;
+    }
+    public static MyBattle checkBattle(Robot robot) throws Exception {
+        Point point = new Point(972, 757);
+        Rectangle screenRect = new Rectangle(point.x, point.y, 100, 100);
+        BufferedImage searchImg = robot.createScreenCapture(screenRect);
+        BufferedImage warImg = ImageIO.read(new File("imgsource/battle_gong.png"));
+        Point battlePoint = ImgCmpUtil.isImageContain(searchImg, warImg);
+        if(null==battlePoint){
+            //宫殿
+            return new MyBattle(true,true);
+        }else{
+            point = new Point(0, 150);
+            screenRect = new Rectangle(point.x, point.y, 60, 60);
+            searchImg = robot.createScreenCapture(screenRect);
+            warImg = ImageIO.read(new File("imgsource/cc.png"));
+            battlePoint = ImgCmpUtil.isImageContain(searchImg, warImg);
+            if(null==battlePoint){
+                //CC不见了
+                return new MyBattle(true,false);
             }
         }
-        **/
-        logger.info("DEBUG:检查是否在战斗中。" + result + ":" + compareResult);
-        return result;
-        //0.7734375 这个就算在战斗中
+        return new MyBattle(false,false);
     }
 
     private static void moveAndClick(Robot robot, Point point, int button) throws Exception {
@@ -507,19 +575,6 @@ public class RobotMain {
         Thread.sleep(20L);
     }
 
-    /**
-     * 根据小地图获取游戏外坐标系的坐标
-     *
-     * @param robot
-     * @param getCityFlag
-     * @param getXYFlag
-     * @return
-     * @throws Exception
-     */
-    private static MyLocation getXYPointByRedCodeOnMinimap(Robot robot, int getCityFlag, int getXYFlag) throws Exception {
-        return null;
-    }
-
     public static MyLocation getMyLocation(Robot robot, int getCityFlag, int getXYFlag) throws Exception {
         MyLocation myLocation = new MyLocation();
         if (1 == getXYFlag) {
@@ -540,65 +595,27 @@ public class RobotMain {
             myLocation.setY(xyArr[1]);
         }
         if (1 == getCityFlag) {
-            Point point = new Point();
-            point.setLocation(29, 71);
-            Rectangle screenRect = new Rectangle(point.x, point.y, 70, 16);
-            BufferedImage cityImage = robot.createScreenCapture(screenRect);
-            cityImage = MyImageUtil.getBlackPicture(cityImage);
-            MyImageUtil.zoomImageAndSave(cityImage, 2, "currentCity", "png");
-            String city = ImageOcr.getCity("currentCity.png");
-            System.err.println(city);
-            myLocation.setMyCity(transCity(city.trim()));
+            MyCityEnum cityEnum = null;
+            int loop =0;
+            while(null==cityEnum){
+                loop++;
+                Point point = new Point();
+                point.setLocation(29, 71);
+                Rectangle screenRect = new Rectangle(point.x, point.y, 70, 16);
+                BufferedImage cityImage = robot.createScreenCapture(screenRect);
+                cityImage = MyImageUtil.getColorPicture(cityImage,Color.WHITE,Color.BLACK);
+                MyImageUtil.zoomImageAndSave(cityImage, 2, "currentCity", "png");
+                String city = ImageOcr.getCity("currentCity.png");
+                cityEnum = CityUtil.transCity(city.trim());
+                System.err.println("........................"+JSON.toJSONString(city.trim()));
+                System.err.println("........................"+JSON.toJSONString(cityEnum));
+                if(loop>5){
+                    break;
+                }
+            }
+            myLocation.setMyCity(cityEnum);
         }
-        System.err.println("~~~~~~~~~~~~~~~~~~~~~" + JSON.toJSONString(myLocation));
         return myLocation;
-    }
-
-    private static MyCityEnum transCity(String cityStr) {
-        if ("建邺捕".equals(cityStr)
-                || "津邺捕".equals(cityStr)
-                || "建邺城".equals(cityStr)) {
-            return MyCityEnum.JY;
-        }
-        if ("东悔湾".equals(cityStr)
-                || "东诲湾".equals(cityStr)
-                || "东悔湾 ‘".equals(cityStr)
-                || "东海湾".equals(cityStr)) {
-            return MyCityEnum.DHW;
-        }
-
-        if ("龙古".equals(cityStr)
-                || "龙古口".equals(cityStr)) {
-            return MyCityEnum.LG;
-        }
-
-        if ("长安城".equals(cityStr)) {
-            return MyCityEnum.CAC;
-        }
-
-        if ("江南野外".equals(cityStr)) {
-            return MyCityEnum.JNYW;
-        }
-        if ("太唐国境".equals(cityStr)) {
-            return MyCityEnum.DTGJ;
-        }
-        if ("太唐憧外".equals(cityStr)) {
-            return MyCityEnum.DTJW;
-        }
-        if ("长寿郊外".equals(cityStr)) {
-            return MyCityEnum.CSJW;
-        }
-        if ("奏琼府".equals(cityStr)) {
-            return MyCityEnum.QQF;
-        }
-        if ("化生寺".equals(cityStr)) {
-            return MyCityEnum.HSS;
-        }
-
-
-        //水晶莒
-
-        return null;
     }
 
     private static int[] getXY(String xyStr) {
@@ -622,6 +639,9 @@ public class RobotMain {
      * @throws Exception
      */
     public static void myMoveTo(Robot robot, Point toPoint) throws Exception {
+        if(null==toPoint){
+            return;
+        }
         int i=0;
         while (true) {
             i++;
@@ -630,11 +650,12 @@ public class RobotMain {
             }
             MyPoint myPoint = getMyPointer(robot);
             if (null == myPoint) {
+                logger.error("myPoint is null!");
                 getRandomSleep();
                 continue;
             }
-            if (isNear(myPoint, toPoint, "mouse",3)) {
-                logger.info("DEBUG:游戏鼠标定位结束," + JSON.toJSONString(myPoint) + ",目标位置" + JSON.toJSONString(toPoint)+"经历次数"+i);
+            if (isNear(myPoint, toPoint, "mouse",1)) {
+                logger.info("经历次数"+i);
                 break;
             }
             int diffX = toPoint.x - myPoint.x;
@@ -652,7 +673,7 @@ public class RobotMain {
         getRandomSleep();
     }
 
-    private static void moveTo(Robot robot, Point point) {
+    public static void moveTo(Robot robot, Point point) {
         try {
             if (1 == 1) {
                 robot.mouseMove(point.x, point.y);
@@ -704,29 +725,17 @@ public class RobotMain {
      * @throws Exception
      */
     public static void findNpc(Robot robot, Point startPoint, int width, int height) throws Exception {
-        robot.keyPress(KeyEvent.VK_ALT);
-        getRandomSleep();
-        robot.keyPress(KeyEvent.VK_H);
-        getRandomSleep();
-        robot.keyRelease(KeyEvent.VK_H);
-        getRandomSleep();
-        robot.keyRelease(KeyEvent.VK_ALT);
-
-        //按下键盘F9
         int stepLength = 20;
-        robot.keyPress(KeyEvent.VK_F9);
-        getRandomSleep();
-        robot.keyRelease(KeyEvent.VK_F9);
+        int stepHeight = 30;
         int startX = startPoint.x;
         int startY = startPoint.y;
         int xcount = width / stepLength + 1;
-        int ycount = height / stepLength + 1;
+        int ycount = height / stepHeight + 1;
         Point point = new Point();
         point.setLocation(startX, startY);
         for (int i = 0; i < ycount; i++) {
             for (int j = 0; j < xcount; j++) {
                 System.err.println(i + "," + j);
-                //myMoveTo(robot, point);
                 moveTo(robot,point);//快一些
                 MyPoint myPoint = getMyPointer(robot);
                 System.err.println(JSON.toJSONString(myPoint));
@@ -735,7 +744,7 @@ public class RobotMain {
                 }
                 point.setLocation(point.x + stepLength, point.y);
             }
-            point.setLocation(startX, point.y + stepLength);
+            point.setLocation(startX, point.y + stepHeight);
         }
     }
 }

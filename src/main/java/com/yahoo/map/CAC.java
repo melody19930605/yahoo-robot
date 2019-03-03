@@ -1,8 +1,9 @@
 package com.yahoo.map;
 
 import com.yahoo.RobotMain;
-import com.yahoo.model.EntranceTypeEnum;
 import com.yahoo.model.MyCityEnum;
+import com.yahoo.model.MyLocation;
+import com.yahoo.util.SearchPointUtil;
 
 import java.awt.*;
 
@@ -14,9 +15,9 @@ public class CAC {
             myMousePoint.setLocation(781, 559);//大约定位到游戏的62,18
             Point myPlayerPoint = new Point();
             myPlayerPoint.setLocation(541, 4);
-            RobotMain.playerGoToPointByXY(robot, myMousePoint, myPlayerPoint, EntranceTypeEnum.DIRECT);
-            myMousePoint.setLocation(913, 780);
-            RobotMain.myMoveAndClick(robot, myMousePoint);
+            Point nextPoint = new Point(913, 780);
+            RobotMain.playerGoToPointByXY(robot, myMousePoint, myPlayerPoint, nextPoint);
+            RobotMain.myMoveAndClick(robot, null);
         }
 
         //秦琼府
@@ -25,9 +26,9 @@ public class CAC {
             myMousePoint.setLocation(336, 489);//大约定位到游戏的62,18
             Point myPlayerPoint = new Point();
             myPlayerPoint.setLocation(92, 78);
-            RobotMain.playerGoToPointByXY(robot, myMousePoint, myPlayerPoint, EntranceTypeEnum.DIRECT);
-            myMousePoint.setLocation(375, 368);
-            RobotMain.myMoveAndClick(robot, myMousePoint);
+            Point nextPoint = new Point(375, 368);
+            RobotMain.playerGoToPointByXY(robot, myMousePoint, myPlayerPoint,nextPoint);
+            RobotMain.myMoveAndClick(robot, null);
         }
 
         //去往大唐国境
@@ -36,9 +37,9 @@ public class CAC {
             myMousePoint.setLocation(259, 556);//大约定位到游戏的62,18
             Point myPlayerPoint = new Point();
             myPlayerPoint.setLocation(19, 9);
-            RobotMain.playerGoToPointByXY(robot, myMousePoint, myPlayerPoint, EntranceTypeEnum.DIRECT);
-            myMousePoint.setLocation(91, 778);
-            RobotMain.myMoveAndClick(robot, myMousePoint);
+            Point nextPoint = new Point(91, 778);
+            RobotMain.playerGoToPointByXY(robot, myMousePoint, myPlayerPoint, nextPoint);
+            RobotMain.myMoveAndClick(robot, null);
         }
 
         //车夫
@@ -47,16 +48,17 @@ public class CAC {
             myMousePoint.setLocation(525, 525);//大约定位到游戏的62,18
             Point myPlayerPoint = new Point();
             myPlayerPoint.setLocation(281, 43);
-            RobotMain.playerGoToPointByXY(robot, myMousePoint, myPlayerPoint, EntranceTypeEnum.NPC);
-            Point cheFuPoint = new Point(360, 372);
-            RobotMain.findNpc(robot, cheFuPoint, 108, 140);
+            RobotMain.playerGoToPointByXY(robot, myMousePoint, myPlayerPoint,null   );
+            myMousePoint = SearchPointUtil.getPointOnMiniMap(robot,MyCityEnum.CF_GJ.toString(),false,"imgsource/cac_cf.png",null);
+            //RobotMain.myMoveTo(robot,myMousePoint);
+            //java.awt.Toolkit.getDefaultToolkit().beep();
+            //Thread.sleep(50000);
+            RobotMain.findNpc(robot, myMousePoint, 140, 140);
             RobotMain.myMoveAndClick(robot, null);
+            Thread.sleep(500L);
             //对话传送
             myMousePoint.setLocation(312, 480);
             RobotMain.myMoveAndClick(robot, myMousePoint);
-            //关闭对话框
-            //myMousePoint.setLocation(785, 445);
-            //myMoveAndClick(robot,myMousePoint);
         }
 
         //化生寺
@@ -65,29 +67,33 @@ public class CAC {
             myMousePoint.setLocation( 743,300);//大约定位到游戏的62,18
             Point myPlayerPoint = new Point();
             myPlayerPoint.setLocation(502, 270);
-            RobotMain.playerGoToPointByXY(robot, myMousePoint, myPlayerPoint, EntranceTypeEnum.NPC);
-            myMousePoint.setLocation(755, 111);
-            RobotMain.myMoveAndClick(robot, myMousePoint);
+            Point nextPoint = new Point(755, 111);
+            RobotMain.playerGoToPointByXY(robot, myMousePoint, myPlayerPoint, nextPoint);
+            RobotMain.myMoveAndClick(robot, null);
         }
 
         //大唐官府
         if (MyCityEnum.DTGF.equals(myCityEnum)) {
-            java.awt.Toolkit.getDefaultToolkit().beep();
-            java.awt.Toolkit.getDefaultToolkit().beep();
-            java.awt.Toolkit.getDefaultToolkit().beep();
-            /**
             Point myMousePoint = new Point();
-            myMousePoint.setLocation( 743,300);//大约定位到游戏的62,18
+            myMousePoint.setLocation( 563,300);//大约定位到游戏的62,18
             Point myPlayerPoint = new Point();
-            myPlayerPoint.setLocation(502, 270);
-            RobotMain.playerGoToPointByXY(robot, myMousePoint, myPlayerPoint, EntranceTypeEnum.NPC);
-            myMousePoint.setLocation(755, 111);
-            RobotMain.myMoveAndClick(robot, myMousePoint);
-            **/
+            myPlayerPoint.setLocation(319, 270);
+            Point nextPoint = new Point(249, 88);
+            RobotMain.playerGoToPointByXY(robot, myMousePoint, myPlayerPoint,nextPoint);
+            RobotMain.myMoveAndClick(robot, null);
         }
 
-
-
+        if (MyCityEnum.CFBJ.equals(myCityEnum)) {
+            RobotMain.opInventory(robot,1);//关闭道具栏
+            Point biaojuPoint = new Point(523,153);
+            //MyLocation myLocation = RobotMain.getMyLocation(robot,0,1);
+            //boolean isNearBiaoju = RobotMain.isNear(biaojuPoint,new Point(myLocation.getX(),myLocation.getY()),"user",5);
+            //System.err.println(isNearBiaoju+"@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+            Point myMousePoint = SearchPointUtil.getPointOnMiniMap(robot,"CFBJ_IN",false,"imgsource/cfbj_in.png",null);
+            RobotMain.myMoveAndClick(robot,myMousePoint);
+        }
+        //防止切换场景
+        Thread.sleep(1500);
 
     }
 }

@@ -10,5 +10,6 @@ public class LXBD {
             Toolkit.getDefaultToolkit().beep();
             Toolkit.getDefaultToolkit().beep();
             Toolkit.getDefaultToolkit().beep();
+        Thread.sleep(1500);
     }
 }

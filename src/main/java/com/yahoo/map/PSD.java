@@ -7,7 +7,5 @@ import java.awt.*;
 public class PSD {
     public static void psd(Robot robot, MyCityEnum myCityEnum) throws Exception {
             Toolkit.getDefaultToolkit().beep();
-            Toolkit.getDefaultToolkit().beep();
-            Toolkit.getDefaultToolkit().beep();
     }
 }

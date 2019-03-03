@@ -14,5 +14,7 @@ public class QQF {
         Point myMousePoint = new Point();
         myMousePoint.setLocation(460, 440);//大约定位到游戏的62,18
         RobotMain.myMoveAndClick(robot, myMousePoint);
+        Thread.sleep(1500);
     }
+
 }
